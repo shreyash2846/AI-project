@@ -1,0 +1,134 @@
+
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
+import { Button } from '@/components/ui/button';
+import { BrainCircuit, Building, ArrowRight, BarChart3, Briefcase } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+const Feature = ({ icon: Icon, title, description }) => (
+  <div className="text-center">
+    <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+      <Icon className="w-6 h-6" />
+    </div>
+    <h3 className="text-lg font-semibold text-slate-800 mb-2">{title}</h3>
+    <p className="text-slate-600">{description}</p>
+  </div>
+);
+
+export default function HomePage() {
+  return (
+    <div className="bg-slate-50">
+      {/* Hero Section */}
+      <div className="relative isolate overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-white via-emerald-50/20 to-blue-50/30 -z-10" />
+        <div
+          className="absolute inset-x-0 top-[-10rem] -z-10 transform-gpu overflow-hidden blur-3xl sm:top-[-20rem]"
+          aria-hidden="true"
+        >
+          <div
+            className="relative left-1/2 -z-10 aspect-[1155/678] w-[36.125rem] max-w-none -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[#10b981] to-[#3b82f6] opacity-20 sm:left-[calc(50%-40rem)] sm:w-[72.1875rem]"
+            style={{
+              clipPath:
+                'polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)',
+            }}
+          />
+        </div>
+        <div className="max-w-4xl mx-auto px-6 py-24 sm:py-32 lg:px-8">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center"
+          >
+            <div className="w-20 h-20 mx-auto mb-8 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+              <BrainCircuit className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-6xl">
+              <span className="bg-gradient-to-r from-emerald-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                SkillSync
+              </span>
+            </h1>
+            <p className="mt-4 text-xl text-slate-700 font-medium">
+              Aligning Your Skills with Success
+            </p>
+            <p className="mt-6 text-lg leading-8 text-slate-600">
+              Go beyond simple keyword matching. Our AI-powered platform helps job seekers land their dream jobs and enables employers to find the perfect candidates.
+            </p>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Main Content - User Role Selection */}
+      <div className="py-16 sm:py-24">
+        <div className="max-w-5xl mx-auto px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <motion.div
+              initial={{ opacity: 0, x: -50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-200/60 h-full flex flex-col">
+                <BarChart3 className="w-10 h-10 text-blue-600 mb-4" />
+                <h2 className="text-2xl font-bold text-slate-900">For Job Seekers</h2>
+                <p className="text-slate-600 mt-2 mb-6 flex-grow">
+                  Optimize your resume for any job description. Get an instant match score, tailored keyword suggestions, and AI-generated interview questions.
+                </p>
+                <Link to={createPageUrl("Analysis")}>
+                  <Button size="lg" className="w-full">
+                    Start Analyzing <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </Link>
+              </div>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-200/60 h-full flex flex-col">
+                <Building className="w-10 h-10 text-indigo-600 mb-4" />
+                <h2 className="text-2xl font-bold text-slate-900">For Employers</h2>
+                <p className="text-slate-600 mt-2 mb-6 flex-grow">
+                  Attract top talent by posting your vacancies on our platform. Clearly define your needs and reach a pool of qualified candidates.
+                </p>
+                <Link to={createPageUrl("PostVacancy")}>
+                  <Button variant="secondary" size="lg" className="w-full">
+                    Post a Job <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </Link>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+
+      {/* Features Section */}
+      <div className="bg-white py-16 sm:py-24">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-slate-900">A Smarter Way to Match</h2>
+            <p className="text-lg text-slate-600 mt-4">Powerful tools for both sides of the hiring equation.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            <Feature
+              icon={BrainCircuit}
+              title="Deep AI Analysis"
+              description="Our AI goes beyond keywords to understand context, skills, and experience."
+            />
+            <Feature
+              icon={Briefcase}
+              title="Targeted Job Postings"
+              description="Employers can define precise requirements to attract the best-fit applicants."
+            />
+            <Feature
+              icon={BarChart3}
+              title="Actionable Feedback"
+              description="Get clear, specific suggestions to improve your resume and interview skills."
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

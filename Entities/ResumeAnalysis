@@ -1,0 +1,87 @@
+{
+  "name": "ResumeAnalysis",
+  "type": "object",
+  "properties": {
+    "job_title": {
+      "type": "string",
+      "description": "Job title from the job description"
+    },
+    "company_name": {
+      "type": "string",
+      "description": "Company name if provided"
+    },
+    "job_description": {
+      "type": "string",
+      "description": "Full job description text"
+    },
+    "resume_url": {
+      "type": "string",
+      "description": "URL to the uploaded resume file"
+    },
+    "resume_text": {
+      "type": "string",
+      "description": "Extracted text from resume"
+    },
+    "match_score": {
+      "type": "number",
+      "description": "Overall matching score (0-100)"
+    },
+    "analysis_results": {
+      "type": "object",
+      "description": "Detailed analysis results from AI",
+      "properties": {
+        "strengths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "missing_keywords": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "recommendations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "skill_gaps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "interview_questions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Generated interview questions"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "analyzing",
+        "completed",
+        "error"
+      ],
+      "default": "analyzing"
+    }
+  },
+  "required": [
+    "job_description"
+  ],
+  "rls": {
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "write": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

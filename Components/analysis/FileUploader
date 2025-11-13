@@ -1,0 +1,145 @@
+import React, { useCallback } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Upload, FileText, CheckCircle, AlertCircle } from "lucide-react";
+import { motion } from "framer-motion";
+
+export default function FileUploader({ onFileSelect, selectedFile }) {
+  const [dragActive, setDragActive] = React.useState(false);
+  const [error, setError] = React.useState("");
+  const fileInputRef = React.useRef(null);
+
+  const handleDrag = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    handleFiles(files);
+  }, []);
+
+  const handleFiles = (files) => {
+    const file = files[0];
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+      setError("Please upload a PDF file only");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      setError("File size must be less than 10MB");
+      return;
+    }
+
+    setError("");
+    onFileSelect(file);
+  };
+
+  const handleFileInput = (e) => {
+    handleFiles(Array.from(e.target.files));
+  };
+
+  const handleBrowseClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  return (
+    <Card className="overflow-hidden">
+      <CardContent className="p-0">
+        <div
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+          className={`relative border-2 border-dashed transition-all duration-200 ${
+            dragActive 
+              ? "border-blue-400 bg-blue-50" 
+              : selectedFile
+              ? "border-green-400 bg-green-50"
+              : "border-slate-300 hover:border-slate-400"
+          }`}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf"
+            onChange={handleFileInput}
+            className="hidden"
+          />
+
+          <div className="p-8 text-center">
+            {selectedFile ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="space-y-4"
+              >
+                <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-8 h-8 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-green-800 mb-2">Resume Uploaded</h3>
+                  <p className="text-sm text-green-600 mb-1">{selectedFile.name}</p>
+                  <p className="text-xs text-green-500">
+                    {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={handleBrowseClick}
+                  className="border-green-300 text-green-700 hover:bg-green-50"
+                >
+                  Change Resume
+                </Button>
+              </motion.div>
+            ) : (
+              <div className="space-y-4">
+                <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center transition-colors ${
+                  dragActive ? "bg-blue-100" : "bg-slate-100"
+                }`}>
+                  <Upload className={`w-8 h-8 ${dragActive ? "text-blue-600" : "text-slate-500"}`} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-800 mb-2">Upload Your Resume</h3>
+                  <p className="text-sm text-slate-600 mb-4">
+                    Drag and drop your PDF resume here, or click to browse
+                  </p>
+                </div>
+                <Button
+                  onClick={handleBrowseClick}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Choose Resume File
+                </Button>
+                <p className="text-xs text-slate-500 mt-4">
+                  PDF files only, max 10MB
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {error && (
+          <div className="p-4 bg-red-50 border-t border-red-200">
+            <div className="flex items-center gap-2 text-red-800">
+              <AlertCircle className="w-4 h-4" />
+              <span className="text-sm font-medium">{error}</span>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

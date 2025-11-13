@@ -1,0 +1,49 @@
+{
+  "name": "Discussion",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "content": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Career Advice",
+        "Interview Tips",
+        "Salary Negotiation",
+        "Industry Insights",
+        "Job Search",
+        "Networking"
+      ]
+    },
+    "author_name": {
+      "type": "string"
+    },
+    "author_type": {
+      "type": "string",
+      "enum": [
+        "candidate",
+        "employer",
+        "mentor"
+      ]
+    },
+    "replies_count": {
+      "type": "number",
+      "default": 0
+    },
+    "likes_count": {
+      "type": "number",
+      "default": 0
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": []
+}

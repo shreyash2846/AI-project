@@ -1,0 +1,59 @@
+{
+  "name": "Vacancy",
+  "type": "object",
+  "properties": {
+    "job_title": {
+      "type": "string"
+    },
+    "company_name": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "job_type": {
+      "type": "string",
+      "enum": [
+        "Full-time",
+        "Part-time",
+        "Contract",
+        "Internship",
+        "Remote"
+      ]
+    },
+    "experience_level": {
+      "type": "string",
+      "enum": [
+        "Internship",
+        "Entry-level",
+        "Associate",
+        "Mid-Senior",
+        "Director",
+        "Executive"
+      ]
+    },
+    "description": {
+      "type": "string"
+    },
+    "responsibilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "required_skills": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "company_logo_url": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "job_title",
+    "company_name",
+    "description"
+  ]
+}

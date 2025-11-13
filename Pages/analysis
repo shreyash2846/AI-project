@@ -1,0 +1,276 @@
+
+import React, { useState } from "react";
+import { ResumeAnalysis } from "@/entities/ResumeAnalysis";
+import { UploadFile, ExtractDataFromUploadedFile, InvokeLLM } from "@/integrations/Core";
+import { AlertCircle, Brain } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { motion, AnimatePresence } from "framer-motion";
+
+import FileUploader from "../components/analysis/FileUploader";
+import JobDescriptionInput from "../components/analysis/JobDescriptionInput";
+import AnalysisProgress from "../components/analysis/AnalysisProgress";
+import ResultsDisplay from "../components/analysis/ResultsDisplay";
+
+// This is the dedicated page for the candidate analysis flow
+export default function AnalysisPage() {
+  const [currentStep, setCurrentStep] = useState("upload");
+  const [formData, setFormData] = useState({
+    jobTitle: "",
+    companyName: "",
+    jobDescription: "",
+    resumeFile: null,
+    resumeUrl: ""
+  });
+  const [analysis, setAnalysis] = useState(null);
+  const [error, setError] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressMessage, setProgressMessage] = useState("");
+
+  const handleFileUpload = (file) => {
+    setFormData(prev => ({ ...prev, resumeFile: file }));
+    setError("");
+  };
+
+  const handleJobDescriptionChange = (data) => {
+    setFormData(prev => ({ ...prev, ...data }));
+  };
+
+  const startAnalysis = async () => {
+    if (!formData.resumeFile || !formData.jobDescription.trim()) {
+      setError("Please upload a resume and provide a job description");
+      return;
+    }
+
+    setIsProcessing(true);
+    setProgress(0);
+    setError("");
+    setCurrentStep("analyzing");
+
+    try {
+      // Step 1: Upload resume
+      setProgressMessage("Uploading your resume...");
+      setProgress(20);
+      const { file_url } = await UploadFile({ file: formData.resumeFile });
+      setFormData(prev => ({ ...prev, resumeUrl: file_url }));
+
+      // Step 2: Extract resume text
+      setProgressMessage("Reading and analyzing resume content...");
+      setProgress(40);
+      const extractResult = await ExtractDataFromUploadedFile({
+        file_url,
+        json_schema: {
+          type: "object",
+          properties: {
+            text_content: { type: "string" }
+          }
+        }
+      });
+
+      if (extractResult.status !== "success") {
+        throw new Error("Failed to read resume content");
+      }
+
+      const resumeText = extractResult.output?.text_content || "";
+
+      // Step 3: AI Analysis
+      setProgressMessage("AI is analyzing your resume match...");
+      setProgress(70);
+      
+      const analysisResult = await InvokeLLM({
+        prompt: `You are an expert resume analyzer and career consultant. Analyze how well this resume matches the given job description.
+
+RESUME CONTENT:
+${resumeText}
+
+JOB DESCRIPTION:
+${formData.jobDescription}
+
+Please provide a comprehensive analysis with:
+1. Overall match score (0-100)
+2. Key strengths that align with the job
+3. Missing keywords that should be added
+4. Specific recommendations for improvement
+5. Skill gaps to address
+
+Be specific and actionable in your recommendations.`,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            match_score: { type: "number" },
+            strengths: { 
+              type: "array", 
+              items: { type: "string" }
+            },
+            missing_keywords: { 
+              type: "array", 
+              items: { type: "string" }
+            },
+            recommendations: { 
+              type: "array", 
+              items: { type: "string" }
+            },
+            skill_gaps: { 
+              type: "array", 
+              items: { type: "string" }
+            },
+            summary: { type: "string" }
+          }
+        }
+      });
+
+      // Step 4: Generate interview questions
+      setProgressMessage("Preparing interview questions...");
+      setProgress(90);
+      
+      const interviewResult = await InvokeLLM({
+        prompt: `Based on this job description, generate 8-10 likely interview questions that candidates should prepare for:
+
+JOB DESCRIPTION:
+${formData.jobDescription}
+
+Provide a mix of:
+- Technical/skill-based questions
+- Behavioral questions
+- Company/role-specific questions
+- Situational questions
+
+Make them realistic and commonly asked in interviews.`,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            questions: { 
+              type: "array", 
+              items: { type: "string" }
+            }
+          }
+        }
+      });
+
+      // Step 5: Save analysis
+      setProgressMessage("Saving your analysis...");
+      setProgress(100);
+
+      const savedAnalysis = await ResumeAnalysis.create({
+        job_title: formData.jobTitle,
+        company_name: formData.companyName,
+        job_description: formData.jobDescription,
+        resume_url: file_url,
+        resume_text: resumeText,
+        match_score: analysisResult.match_score,
+        analysis_results: {
+          strengths: analysisResult.strengths,
+          missing_keywords: analysisResult.missing_keywords,
+          recommendations: analysisResult.recommendations,
+          skill_gaps: analysisResult.skill_gaps,
+          summary: analysisResult.summary
+        },
+        interview_questions: interviewResult.questions,
+        status: "completed"
+      });
+
+      setAnalysis(savedAnalysis);
+      setCurrentStep("results");
+    } catch (err) {
+      console.error("Analysis error:", err);
+      setError("Analysis failed. Please try again.");
+    } finally {
+      setIsProcessing(false);
+      setProgress(0);
+    }
+  };
+
+  const startNewAnalysis = () => {
+    setCurrentStep("upload");
+    setFormData({
+      jobTitle: "",
+      companyName: "",
+      jobDescription: "",
+      resumeFile: null,
+      resumeUrl: ""
+    });
+    setAnalysis(null);
+    setError("");
+    setProgress(0);
+  };
+
+  return (
+    <div className="min-h-screen p-4 md:p-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6"
+          >
+            <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <Brain className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold mb-4">
+              <span className="bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
+                TalentBridge AI
+              </span>
+            </h1>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Get an instant match score, keyword suggestions, and interview prep tailored to your target job
+            </p>
+          </motion.div>
+        </div>
+
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <AnimatePresence mode="wait">
+          {currentStep === "upload" && (
+            <motion.div
+              key="upload"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-8"
+            >
+              <FileUploader onFileSelect={handleFileUpload} selectedFile={formData.resumeFile} />
+              <JobDescriptionInput 
+                data={formData}
+                onChange={handleJobDescriptionChange}
+                onAnalyze={startAnalysis}
+                isProcessing={isProcessing}
+                isValid={formData.resumeFile && formData.jobDescription.trim()}
+              />
+            </motion.div>
+          )}
+
+          {currentStep === "analyzing" && (
+            <motion.div
+              key="analyzing"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+            >
+              <AnalysisProgress progress={progress} message={progressMessage} />
+            </motion.div>
+          )}
+
+          {currentStep === "results" && analysis && (
+            <motion.div
+              key="results"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <ResultsDisplay 
+                analysis={analysis} 
+                onNewAnalysis={startNewAnalysis}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}

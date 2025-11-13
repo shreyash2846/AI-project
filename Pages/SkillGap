@@ -1,0 +1,239 @@
+import React, { useState } from 'react';
+import { SkillGap } from '@/entities/SkillGap';
+import { InvokeLLM } from '@/integrations/Core';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Target, BookOpen, ExternalLink, TrendingUp, Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+export default function SkillGapPage() {
+  const [targetRole, setTargetRole] = useState('');
+  const [currentSkills, setCurrentSkills] = useState('');
+  const [analysis, setAnalysis] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const analyzeSkillGap = async () => {
+    if (!targetRole.trim() || !currentSkills.trim()) return;
+
+    setIsAnalyzing(true);
+    try {
+      const result = await InvokeLLM({
+        prompt: `Analyze the skill gap for someone wanting to become a ${targetRole}. Their current skills are: ${currentSkills}
+
+Provide:
+1. Missing skills they need to develop
+2. Recommended courses/resources for each missing skill
+3. Priority level (High/Medium/Low) for each skill
+4. Estimated timeline to acquire these skills
+
+Be specific and practical in recommendations.`,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            missing_skills: {
+              type: "array",
+              items: { type: "string" }
+            },
+            recommended_courses: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  skill: { type: "string" },
+                  course_title: { type: "string" },
+                  provider: { type: "string" },
+                  duration: { type: "string" },
+                  priority: { type: "string" }
+                }
+              }
+            },
+            overall_assessment: { type: "string" },
+            timeline_months: { type: "number" }
+          }
+        }
+      });
+
+      const savedAnalysis = await SkillGap.create({
+        target_role: targetRole,
+        current_skills: currentSkills.split(',').map(s => s.trim()),
+        missing_skills: result.missing_skills,
+        recommended_courses: result.recommended_courses,
+        priority_level: "High"
+      });
+
+      setAnalysis({ ...savedAnalysis, ...result });
+    } catch (error) {
+      console.error("Skill gap analysis failed:", error);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen p-4 md:p-8">
+      <div className="max-w-6xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-8"
+        >
+          <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Target className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-slate-800">Skill Gap Analysis</h1>
+          <p className="text-slate-600 mt-2">Identify missing skills and get personalized learning recommendations</p>
+        </motion.div>
+
+        {!analysis ? (
+          <Card className="max-w-2xl mx-auto">
+            <CardHeader>
+              <CardTitle>Analyze Your Skill Gap</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="targetRole">Target Job Role</Label>
+                <Input
+                  id="targetRole"
+                  placeholder="e.g. Senior Frontend Developer"
+                  value={targetRole}
+                  onChange={(e) => setTargetRole(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="currentSkills">Current Skills (comma-separated)</Label>
+                <Input
+                  id="currentSkills"
+                  placeholder="e.g. HTML, CSS, JavaScript, React"
+                  value={currentSkills}
+                  onChange={(e) => setCurrentSkills(e.target.value)}
+                />
+              </div>
+              <Button
+                onClick={analyzeSkillGap}
+                disabled={isAnalyzing || !targetRole.trim() || !currentSkills.trim()}
+                className="w-full"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Target className="w-4 h-4 mr-2" />
+                    Analyze Skill Gap
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Overview */}
+            <div className="lg:col-span-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-green-600" />
+                    Analysis for {analysis.target_role}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-slate-700 mb-4">{analysis.overall_assessment}</p>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">Estimated Timeline:</span>
+                      <Badge variant="outline">{analysis.timeline_months} months</Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">Missing Skills:</span>
+                      <Badge variant="outline">{analysis.missing_skills?.length} skills</Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Missing Skills */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Missing Skills</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {analysis.missing_skills?.map((skill, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 bg-red-50 rounded-lg">
+                      <span className="font-medium text-red-800">{skill}</span>
+                      <Badge variant="destructive" className="text-xs">Required</Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Learning Roadmap */}
+            <div className="lg:col-span-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-blue-600" />
+                    Recommended Learning Path
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {analysis.recommended_courses?.map((course, index) => (
+                      <div key={index} className="border rounded-lg p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h4 className="font-semibold">{course.course_title}</h4>
+                            <p className="text-sm text-slate-600">For: {course.skill}</p>
+                          </div>
+                          <Badge className={`${
+                            course.priority === 'High' ? 'bg-red-100 text-red-800' :
+                            course.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
+                          }`}>
+                            {course.priority} Priority
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4 text-sm text-slate-500">
+                            <span>Provider: {course.provider}</span>
+                            <span>Duration: {course.duration}</span>
+                          </div>
+                          <Button variant="outline" size="sm">
+                            <ExternalLink className="w-3 h-3 mr-1" />
+                            View Course
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="lg:col-span-3">
+              <Button
+                onClick={() => {
+                  setAnalysis(null);
+                  setTargetRole('');
+                  setCurrentSkills('');
+                }}
+                variant="outline"
+                className="w-full"
+              >
+                Analyze Another Role
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

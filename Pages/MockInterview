@@ -1,0 +1,358 @@
+import React, { useState } from 'react';
+import { MockInterview } from '@/entities/MockInterview';
+import { InvokeLLM } from '@/integrations/Core';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { MessageCircle, Play, ArrowRight, CheckCircle, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+export default function MockInterviewPage() {
+  const [jobRole, setJobRole] = useState('');
+  const [questions, setQuestions] = useState([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [currentAnswer, setCurrentAnswer] = useState('');
+  const [responses, setResponses] = useState([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [finalResults, setFinalResults] = useState(null);
+  const [stage, setStage] = useState('setup'); // setup, interview, results
+
+  const generateQuestions = async () => {
+    if (!jobRole.trim()) return;
+
+    setIsGenerating(true);
+    try {
+      const result = await InvokeLLM({
+        prompt: `Generate 8 realistic interview questions for a ${jobRole} position. Include:
+        - 3 technical/skill-based questions
+        - 3 behavioral questions
+        - 2 situational questions
+        
+        Make them challenging but fair, and commonly asked in real interviews.`,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            questions: {
+              type: "array",
+              items: { type: "string" }
+            }
+          }
+        }
+      });
+
+      setQuestions(result.questions);
+      setStage('interview');
+    } catch (error) {
+      console.error("Failed to generate questions:", error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const submitAnswer = async () => {
+    if (!currentAnswer.trim()) return;
+
+    setIsAnalyzing(true);
+    try {
+      const feedback = await InvokeLLM({
+        prompt: `Evaluate this interview answer for a ${jobRole} position:
+
+Question: ${questions[currentQuestionIndex]}
+Answer: ${currentAnswer}
+
+Provide constructive feedback focusing on:
+- Content quality and relevance
+- Communication clarity
+- Areas for improvement
+- A score out of 10
+
+Be encouraging but honest in your assessment.`,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            feedback: { type: "string" },
+            score: { type: "number" },
+            strengths: {
+              type: "array",
+              items: { type: "string" }
+            },
+            improvements: {
+              type: "array", 
+              items: { type: "string" }
+            }
+          }
+        }
+      });
+
+      const newResponse = {
+        question: questions[currentQuestionIndex],
+        answer: currentAnswer,
+        feedback: feedback.feedback,
+        score: feedback.score,
+        strengths: feedback.strengths,
+        improvements: feedback.improvements
+      };
+
+      setResponses([...responses, newResponse]);
+      setCurrentAnswer('');
+
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+      } else {
+        // Interview complete, generate final results
+        const allResponses = [...responses, newResponse];
+        const averageScore = allResponses.reduce((sum, r) => sum + r.score, 0) / allResponses.length;
+        
+        const finalAnalysis = await MockInterview.create({
+          job_role: jobRole,
+          questions: questions,
+          responses: allResponses,
+          overall_score: averageScore,
+          improvement_areas: allResponses.flatMap(r => r.improvements)
+        });
+
+        setFinalResults(finalAnalysis);
+        setStage('results');
+      }
+    } catch (error) {
+      console.error("Failed to analyze answer:", error);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const startNewInterview = () => {
+    setStage('setup');
+    setJobRole('');
+    setQuestions([]);
+    setCurrentQuestionIndex(0);
+    setCurrentAnswer('');
+    setResponses([]);
+    setFinalResults(null);
+  };
+
+  return (
+    <div className="min-h-screen p-4 md:p-8">
+      <div className="max-w-4xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-8"
+        >
+          <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <MessageCircle className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-slate-800">Mock Interview Assistant</h1>
+          <p className="text-slate-600 mt-2">Practice with AI-generated questions and get instant feedback</p>
+        </motion.div>
+
+        <AnimatePresence mode="wait">
+          {stage === 'setup' && (
+            <motion.div
+              key="setup"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+            >
+              <Card className="max-w-2xl mx-auto">
+                <CardHeader>
+                  <CardTitle>Start Your Mock Interview</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="jobRole">Job Role/Position</Label>
+                    <Input
+                      id="jobRole"
+                      placeholder="e.g. Software Engineer, Product Manager"
+                      value={jobRole}
+                      onChange={(e) => setJobRole(e.target.value)}
+                    />
+                  </div>
+                  <Button
+                    onClick={generateQuestions}
+                    disabled={isGenerating || !jobRole.trim()}
+                    className="w-full"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Generating Questions...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4 mr-2" />
+                        Start Mock Interview
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {stage === 'interview' && (
+            <motion.div
+              key="interview" 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+            >
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-semibold">Question {currentQuestionIndex + 1} of {questions.length}</h3>
+                    <p className="text-slate-600">For: {jobRole}</p>
+                  </div>
+                  <Progress value={((currentQuestionIndex) / questions.length) * 100} className="w-32" />
+                </div>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">
+                      {questions[currentQuestionIndex]}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="answer">Your Answer</Label>
+                      <Textarea
+                        id="answer"
+                        placeholder="Take your time to provide a thoughtful answer..."
+                        value={currentAnswer}
+                        onChange={(e) => setCurrentAnswer(e.target.value)}
+                        rows={6}
+                      />
+                    </div>
+                    <Button
+                      onClick={submitAnswer}
+                      disabled={isAnalyzing || !currentAnswer.trim()}
+                      className="w-full"
+                    >
+                      {isAnalyzing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Analyzing Answer...
+                        </>
+                      ) : (
+                        <>
+                          {currentQuestionIndex < questions.length - 1 ? (
+                            <>
+                              <ArrowRight className="w-4 h-4 mr-2" />
+                              Next Question
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                              Complete Interview
+                            </>
+                          )}
+                        </>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Previous Responses */}
+                {responses.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Previous Responses</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {responses.map((response, index) => (
+                          <div key={index} className="p-4 border rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-medium">Question {index + 1}</h4>
+                              <Badge className={`${
+                                response.score >= 8 ? 'bg-green-100 text-green-800' :
+                                response.score >= 6 ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-red-100 text-red-800'
+                              }`}>
+                                {response.score}/10
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-slate-600 mb-2">{response.question}</p>
+                            <p className="text-sm">{response.feedback}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {stage === 'results' && finalResults && (
+            <motion.div
+              key="results"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+            >
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <CheckCircle className="w-6 h-6 text-green-600" />
+                      Interview Complete!
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center mb-6">
+                      <div className="text-4xl font-bold text-slate-800 mb-2">
+                        {finalResults.overall_score?.toFixed(1)}/10
+                      </div>
+                      <p className="text-slate-600">Overall Performance</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <h4 className="font-semibold mb-3">Your Responses</h4>
+                        <div className="space-y-3">
+                          {finalResults.responses?.map((response, index) => (
+                            <div key={index} className="p-3 border rounded-lg">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="font-medium">Q{index + 1}</span>
+                                <Badge variant="outline">{response.score}/10</Badge>
+                              </div>
+                              <p className="text-sm text-slate-600">{response.question}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-semibold mb-3">Areas for Improvement</h4>
+                        <div className="space-y-2">
+                          {finalResults.improvement_areas?.slice(0, 5).map((area, index) => (
+                            <div key={index} className="p-3 bg-yellow-50 rounded-lg">
+                              <span className="text-sm text-yellow-800">{area}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={startNewInterview}
+                      className="w-full mt-6"
+                    >
+                      Start New Interview
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}

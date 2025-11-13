@@ -1,0 +1,37 @@
+{
+  "name": "JobAlert",
+  "type": "object",
+  "properties": {
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "location": {
+      "type": "string"
+    },
+    "salary_min": {
+      "type": "number"
+    },
+    "job_type": {
+      "type": "string"
+    },
+    "experience_level": {
+      "type": "string"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notification_frequency": {
+      "type": "string",
+      "enum": [
+        "Daily",
+        "Weekly",
+        "Instant"
+      ]
+    }
+  },
+  "required": []
+}

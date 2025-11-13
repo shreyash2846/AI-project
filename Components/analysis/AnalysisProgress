@@ -1,0 +1,35 @@
+
+import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Brain, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
+
+export default function AnalysisProgress({ progress, message }) {
+  return (
+    <Card className="max-w-md mx-auto">
+      <CardContent className="p-8 text-center">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg"
+        >
+          <Brain className="w-8 h-8 text-white" />
+        </motion.div>
+        
+        <h3 className="text-xl font-semibold text-slate-800 mb-2">AI Analysis in Progress</h3>
+        <p className="text-slate-600 mb-6">{message}</p>
+        
+        <div className="space-y-2">
+          <Progress value={progress} className="h-2" />
+          <p className="text-sm text-slate-500">{progress}% complete</p>
+        </div>
+        
+        <div className="flex items-center justify-center gap-2 mt-6 text-sm text-slate-500">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          This may take a minute...
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

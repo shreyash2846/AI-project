@@ -1,0 +1,56 @@
+{
+  "name": "UserProfile",
+  "type": "object",
+  "properties": {
+    "user_type": {
+      "type": "string",
+      "enum": [
+        "candidate",
+        "employer"
+      ],
+      "description": "Whether user is job seeker or employer"
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of user skills"
+    },
+    "experience_level": {
+      "type": "string",
+      "enum": [
+        "Entry",
+        "Mid",
+        "Senior",
+        "Executive"
+      ]
+    },
+    "industry": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "desired_salary_min": {
+      "type": "number"
+    },
+    "desired_salary_max": {
+      "type": "number"
+    },
+    "profile_strength_score": {
+      "type": "number",
+      "default": 0
+    },
+    "resume_url": {
+      "type": "string"
+    },
+    "linkedin_url": {
+      "type": "string"
+    },
+    "portfolio_url": {
+      "type": "string"
+    }
+  },
+  "required": []
+}

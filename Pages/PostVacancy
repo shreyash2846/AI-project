@@ -1,0 +1,162 @@
+import React, { useState } from 'react';
+import { Vacancy } from '@/entities/Vacancy';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Briefcase, Building, MapPin, CheckCircle, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
+import { motion } from 'framer-motion';
+
+export default function PostVacancyPage() {
+  const [formData, setFormData] = useState({
+    job_title: '',
+    company_name: '',
+    location: '',
+    job_type: '',
+    experience_level: '',
+    description: '',
+    responsibilities: [''],
+    required_skills: ['']
+  });
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const navigate = useNavigate();
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+  
+  const handleListChange = (field, index, value) => {
+    const newList = [...formData[field]];
+    newList[index] = value;
+    setFormData(prev => ({ ...prev, [field]: newList }));
+  };
+
+  const addListItem = (field) => {
+    setFormData(prev => ({ ...prev, [field]: [...prev[field], ''] }));
+  };
+
+  const removeListItem = (field, index) => {
+    const newList = formData[field].filter((_, i) => i !== index);
+    setFormData(prev => ({ ...prev, [field]: newList }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsProcessing(true);
+    try {
+      await Vacancy.create({
+        ...formData,
+        responsibilities: formData.responsibilities.filter(r => r.trim() !== ''),
+        required_skills: formData.required_skills.filter(s => s.trim() !== '')
+      });
+      setIsSuccess(true);
+      setTimeout(() => navigate(createPageUrl('EmployerDashboard')), 2000);
+    } catch (error) {
+      console.error("Failed to post vacancy:", error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  
+  if (isSuccess) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-4">
+        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring' }}>
+          <CheckCircle className="w-24 h-24 text-green-500 mb-6" />
+        </motion.div>
+        <h2 className="text-2xl font-bold text-slate-800">Vacancy Posted Successfully!</h2>
+        <p className="text-slate-600 mt-2">Redirecting you to the dashboard...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen p-4 md:p-8">
+      <div className="max-w-3xl mx-auto">
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-8"
+        >
+          <h1 className="text-3xl font-bold text-slate-800">Post a New Vacancy</h1>
+          <p className="text-slate-600 mt-2">Fill in the details below to attract the best talent.</p>
+        </motion.div>
+
+        <Card>
+          <form onSubmit={handleSubmit}>
+            <CardContent className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="job_title">Job Title</Label>
+                  <Input id="job_title" placeholder="e.g. Frontend Developer" value={formData.job_title} onChange={(e) => handleInputChange('job_title', e.target.value)} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="company_name">Company Name</Label>
+                  <Input id="company_name" placeholder="Your Company Inc." value={formData.company_name} onChange={(e) => handleInputChange('company_name', e.target.value)} required />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                 <div className="space-y-2">
+                  <Label htmlFor="location">Location</Label>
+                  <Input id="location" placeholder="e.g. San Francisco, CA" value={formData.location} onChange={(e) => handleInputChange('location', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="job_type">Job Type</Label>
+                  <Select onValueChange={(v) => handleInputChange('job_type', v)} value={formData.job_type}>
+                    <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                    <SelectContent>{["Full-time", "Part-time", "Contract", "Internship", "Remote"].map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="experience_level">Experience Level</Label>
+                  <Select onValueChange={(v) => handleInputChange('experience_level', v)} value={formData.experience_level}>
+                    <SelectTrigger><SelectValue placeholder="Select level" /></SelectTrigger>
+                    <SelectContent>{["Internship", "Entry-level", "Associate", "Mid-Senior", "Director", "Executive"].map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Job Description</Label>
+                <Textarea id="description" placeholder="A brief summary of the role..." value={formData.description} onChange={(e) => handleInputChange('description', e.target.value)} required rows={5}/>
+              </div>
+              
+              <div className="space-y-2">
+                 <Label>Responsibilities</Label>
+                 {formData.responsibilities.map((item, index) => (
+                    <div key={index} className="flex gap-2 items-center">
+                        <Input value={item} onChange={(e) => handleListChange('responsibilities', index, e.target.value)} placeholder="e.g. Develop new user-facing features"/>
+                        <Button type="button" variant="outline" size="sm" onClick={() => removeListItem('responsibilities', index)}>Remove</Button>
+                    </div>
+                 ))}
+                 <Button type="button" variant="secondary" size="sm" onClick={() => addListItem('responsibilities')}>+ Add Responsibility</Button>
+              </div>
+
+               <div className="space-y-2">
+                 <Label>Required Skills</Label>
+                 {formData.required_skills.map((item, index) => (
+                    <div key={index} className="flex gap-2 items-center">
+                        <Input value={item} onChange={(e) => handleListChange('required_skills', index, e.target.value)} placeholder="e.g. React, TypeScript"/>
+                        <Button type="button" variant="outline" size="sm" onClick={() => removeListItem('required_skills', index)}>Remove</Button>
+                    </div>
+                 ))}
+                 <Button type="button" variant="secondary" size="sm" onClick={() => addListItem('required_skills')}>+ Add Skill</Button>
+              </div>
+              
+              <Button type="submit" className="w-full" size="lg" disabled={isProcessing}>
+                {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Briefcase className="mr-2 h-4 w-4" />}
+                {isProcessing ? 'Posting...' : 'Post Vacancy'}
+              </Button>
+            </CardContent>
+          </form>
+        </Card>
+      </div>
+    </div>
+  );
+}
